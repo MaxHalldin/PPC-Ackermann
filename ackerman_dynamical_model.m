@@ -6,51 +6,58 @@ y1tp = @(t)cos(t);
 y2tp = @(t)-sin(t);
 y1tb = @(t)-sin(t);
 y2tb = @(t)-cos(t);
-y1tt = @(t)-cos(t);
-y2tt = @(t)sin(t);
-traj = {y1t y2t y1tp y2tp y1tb y2tb y1tt y2tt};
+traj = {y1t y2t y1tp y2tp y1tb y2tb};
 
-function xdot = ODE(t, x, params, ref)
-    % Function based on the psuedocode of Arcuri, et al.
+function [dydt, inputs] = ydot(t, x, params, ref)
     [x1, x2, theta, phi, u1, w] = deal(x(1),x(2),x(3),x(4),x(5),x(6));
-    [L, k0, k1, k2] = deal(params(1),params(2),params(3),params(4));
-    [x1ref, x2ref, x1pref, x2pref, x1bref, x2bref, x1tref, x2tref] = ref{:};
+    [L, M1, M2] = deal(params(1));
+    [y1ref, y2ref, y1pref, y2pref, y1bref, y2bref] = ref{:};
 
-    x1dot = u1*cos(theta);
-    x2dot = u1*sin(theta);
-    thetadot = u1/L*tan(phi);
+    thetadot = u1*tan(phi)/L;
     u1dot = w;
 
-    x1ddot = u1dot*cos(theta) - u1*thetadot*sin(theta);
-    x2ddot = u1dot*sin(theta) + u1*thetadot*cos(theta);
+    y1 = x1; 
+    y2 = x2;
+    y1dot = u1*cos(theta);
+    y2dot = u1*sin(theta);
+    y1ddot = w*cos(theta) - u1*thetadot*sin(theta);
+    y2ddot = w*sin(theta) + u1*thetadot*cos(theta);
 
-    e1 = x1-x1ref(t);          e2 = x2-x2ref(t);
-    e1p = x1dot-x1pref(t);     e2p = x2dot-x2pref(t);
-    e1b = x1ddot-x1bref(t);    e2b = x2ddot-x2bref(t);
+    Y = [y1 y2 y1dot y2dot y1ddot y2ddot].';
+    R = [y1ref(t) y2ref(t) y1pref(t) y2pref(t) y1bref(t) y2bref(t)].';
+    A = [zeros(4,2) eye(4,4); zeros(2,6)];
+    B = [zeros(4,2); eye(2,2)];
 
-    a1 = x1tref(t) - k2*e1b - k1*e1p - k0*e1;
-    a2 = x2tref(t) - k2*e2b - k1*e2p - k0*e2;
+    % Poles based on Franch, et al.
+    p = [-200 -200 -100 -100 -2 -2]; 
+    K = place(A,B,p);
+    V = K*(R-Y);
 
-    C1 = -3*w*u1/L*tan(phi)*sin(theta) - u1^3/L*tan(phi)^2*cos(theta);
-    C2 = 3*w*u1/L*tan(phi)*cos(theta) - u1^3/L*tan(phi)^2*sin(theta);
+    y1dddot = V(1);
+    y2dddot = V(2);
 
-    k = u1^2/L*sec(phi)^2;
-    k = max([k 1e-3]);
+    phidot = (L * sqrt(y1dot^2 + y2dot^2) * ...
+             (y2dddot * y1dot - y2dot * y1dddot) *...
+             (y1dot^2 + y2dot^2) - 3 * ...
+             (y1ddot * y1dot + y2ddot * y2dot) *...
+             (y2ddot * y1dot - y1ddot * y2dot)) /...
+             ((y1dot^2 + y2dot^2)^3 + L^2 *...
+             (y2ddot * y1dot - y1ddot*y2dot)^2);
+    F = (M1 + M2 + M2*tan(phi)^2)*u1dot +... 
+        M2*phidot*sin(phi)*u1/(cos(phi)^3);
     
-    v1 = (a1-C1)*cos(theta) + (a2-C2)*sin(theta);
-    v2 = ((a2-C2)*cos(theta) - (a1-C1)*sin(theta))/k ;
+    a = -u1dot*u1/L*tan(phi)*sin(theta) - u1^3/L*tan(phi)^2*cos(theta);
+    b = u1dot*u1/L*tan(phi)*cos(theta) - u1^3/L*tan(phi)^2*sin(theta);
+    wdot = (y1dddot-a)*cos(theta) + (y2dddot-b)*sin(theta);
 
-    wdot = v1;
-    phidot = v2;
-    xdot = [x1dot; x2dot; thetadot; phidot; u1dot; wdot];
+    inputs = [phidot, F];
+    dydt = [y1dot; y2dot; thetadot; phidot; u1dot; wdot];
 end
-
-function testTrack(ref)
     tspan = [0 20];
-    params = [1.0 3.0 6.0 4.5];
+    params = [1.0 2.0 2.0];
     y0 = [1 1 0.2 0.05 0.15 0];
     
-    [t, X] = ode45(@(t,y)ODE(t,y,params,ref), tspan, y0);
+    [t, X] = ode45(@(t,y)xdot(t,y,params,ref), tspan, y0);
     
     e1 = X(:,1)-ref{1}(t);
     e2 = X(:,2)-ref{2}(t);
@@ -60,18 +67,65 @@ function testTrack(ref)
     grid on
     xlabel('x1')
     ylabel('x2')
-    legend('estimated path', 'true path')
+    legend('Estimated path', 'True path')
     title('Path tracking')
     f2 = figure;
     plot(t,e1)
     hold on
     plot(t,e2)
     grid on
-    xlabel('time')
-    ylabel('error')
+    xlabel('Time')
+    ylabel('Error')
     legend('e_1', 'e_2')
     title('Tracking error')
     hold off
 end
 
-testTrack(traj)
+function testTrack2(ref)
+    tspan = [0 20];
+    params = [1.0 2.0 2.0];
+    y0 = [1 1 0.2 0.05 0.15 0];
+    
+    [t, Y] = ode45(@(t,y)ydot(t,y,params,ref), tspan, y0);
+    
+    figure
+    hold on
+    plot(Y(:,1), Y(:,2))
+    plot(ref{1}(t),ref{2}(t),':')
+    grid on
+    xlabel('x1')
+    ylabel('x2')
+    legend('Estimated path', 'True path')
+    title('Path tracking')
+    hold off
+
+    figure
+    e1 = Y(:,1)-ref{1}(t);
+    e2 = Y(:,2)-ref{2}(t);
+    plot(t,e1)
+    hold on
+    plot(t,e2)
+    grid on
+    xlabel('Time')
+    ylabel('Error')
+    legend('e_1', 'e_2')
+    title('Tracking error')
+    hold off
+    
+    figure
+    hold on
+    inputs = zeros(length(t),2);
+    for k = 1:length(inputs)
+        [~,inputs(k,:)] = ydot(t(k),Y(k,:),params,ref);
+    end
+    yyaxis left
+    plot(t,inputs(1),'-')
+    ylabel("phidot")
+    yyaxis right
+    plot(t,inputs(2),'-')
+    ylabel("F")
+    grid on
+    hold of
+end
+
+testTrack2(traj)
