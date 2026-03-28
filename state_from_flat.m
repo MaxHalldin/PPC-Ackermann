@@ -10,7 +10,7 @@ end
 arguments (Output)
     x
 end
-    L = params{1};
+    L = params(1);
 
     x = zeros(6,1,'double');
     x(1) = y(1);
