@@ -14,16 +14,16 @@ ref = {y1t y2t y1tp y2tp y1tb y2tb};
 
 tspan = [0; 20];
 params = {1.0, 2.0, 2.0, [40,30,100]};
-x0 = [0.1; 0.9; 0.2; 0.05; 0.15; 0];
+x0 = [0; 1; 0.1; 0; 0; 0];
 y0 = state_to_flat(x0,params);
 
 l = 1;
 rho_inf = 0.2;
 rho0 = 50;
 
-rho1 = @(t)(rho0*2-rho_inf)*exp(-l*t) + rho_inf;
-rho2 = @(t)(rho0-rho_inf)*exp(-l*t) + rho_inf;
-rho3 = @(t)(rho0/rho0-rho_inf)*exp(-l*t) + rho_inf;
+rho1 = @(t)(rho0*1-rho_inf)*exp(-1*t) + rho_inf;
+rho2 = @(t)(rho0*3-rho_inf)*exp(-2*t) + rho_inf;
+rho3 = @(t)(rho0/50-rho_inf)*exp(-0.5*l*t) + rho_inf;
 rhos = {rho1, rho2, rho3};
 
 tic

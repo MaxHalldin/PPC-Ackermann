@@ -22,7 +22,6 @@ end
     [rho1, rho2, rho3] = rhos{:};
     R = cellfun(@(c) c(t), ref);
     
-    % maybe a1&2 should be in dydt.
     a1  = -k(1)*Tf( (Y(1:2) - R(1:2).') / rho1(t) );
     a2  = -k(2)*Tf( (Y(3:4) - a1)       / rho2(t) );
     u   = -k(3)*Tf( (Y(5:6) - a2)       / rho3(t) );
