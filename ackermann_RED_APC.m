@@ -7,8 +7,8 @@ close all;
 data = load("circ_traj.mat"); 
 ref = data.ref;
 
-tspan = [0; 20]; % Seconds
-sampling_freq = 1e4; %Hz
+tspan = [0; 40]; % Seconds
+sampling_freq = 7e3; %Hz
 dt = 1/sampling_freq;
 ts = tspan(1):dt:tspan(2);
 
@@ -29,17 +29,17 @@ param.a = flip(poly(-1*param.lambda)); %Row vector % Need to have the negative h
 param.rho_0 = 5*[1 1].';
 param.rho_inf = param.lambda(1)*param.e_inf;
 param.K = 1.2;
-param.ubar = 5;
-param.ebar = 5;
+param.ebar = 5; % Not currently used and not needed for this observer in my opinion.
 
 param.A = [zeros(4,2) eye(4,4); zeros(2,6)];
 param.B = [zeros(4,2); eye(2,2)];
 
-param.k = [6; 4.5; 4.182]; % values borrowed from article.
+param.k = [6; 4.5; 4.182]; % Values borrowed from article.
+param.kprim = [10; 10; 0.2].*param.k; % Unlikely to be optimal. Should be selected experimentally. 
 param.DGF = @(x)sign(x)*(abs(x)^(1/2)+abs(x)^(3/2));
 param.DGFprime = @(x)(3*abs(x)+1)/(2*sqrt(abs(x)) + eps );
 
-y0 = [-0.01; 1.99; 0.99; -0.01; 0; 0];
+y0 = [-0.01; 1.99; 0.3; -0.01; 0; 0];
 
 ehat_0 = [0 0 0 0 0 0].';
 xer0 = [y0; ehat_0; param.rho_0];
@@ -51,12 +51,10 @@ Y(:,1) = xer0;
 U = zeros(4,length(ts));
 inputs = zeros(4,length(ts));
 
-% assert(r_0 > abs(y_0(1)-yr(0)-ehat_0(1)))
-
 tic
 for i = 1:length(ts)-1
     % This is the forward Euler method. 
-    [temp,U(:,i+1),inputs(:,i+1)] = RED_APC(ts(i), Y(:,i), ref, param);
+    [temp,U(:,i+1),inputs(:,i+1)] = RED_APC(ts(i), Y(:,i), {ref{1:2}}.', param);
     Y(:,i+1) = Y(:,i) + dt*temp;
 end
 toc
@@ -170,8 +168,7 @@ function [res,U,inputs] = RED_APC(t,y,ref,params)
     rho = y(13:14);
    
     Y_ref = cellfun(@(c) c(t), ref);
-    % e = Y(1:2)-Y_ref(1:2);
-    e = Y-Y_ref;
+    e = Y(1:2)-Y_ref(1:2);
     de = e(1:2)-ehat(1:2);
 
     % RED
@@ -191,7 +188,7 @@ function [res,U,inputs] = RED_APC(t,y,ref,params)
     dedot = params.dt*ehatdot1(3:4);
 
     % This will need to be tuned experimentally
-    k = [10; 10; 0.2].*params.k; 
+    k = params.kprim;
 
     vx = [1/k(3)*params.DGF(k(3)^2*dedot(1));
          2*params.DGF(k(3)^2*dedot(1))*params.DGFprime(k(3)^2*dedot(1))];
@@ -284,13 +281,6 @@ function res = sat(x, xbar)
     % is a vector, then xbar can either be a scalar or a vector of same 
     % size as x.
     res = sign(x).*min(abs(x), xbar);
-end
-
-function res = sat_pos(x, xbar)
-    % Assuming xbar is positive
-    temp = min(abs(x), xbar);
-    res = max(zeros(size(temp)), temp);
-    
 end
 
 function res = RMS(X)
