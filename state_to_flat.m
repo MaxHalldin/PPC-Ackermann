@@ -1,16 +1,21 @@
-function y = state_to_flat(x,params)
+function y = state_to_flat(x,L)
 %   Transforms the non-flat system to the flat one
-%   x       -   state vector
+%   x - state vector
+%    -> "x1" = "y1"
+%    -> "x2" = "y2"
+%    -> "x3" = "theta"
+%    -> "x4" = "phi"
+%    -> "x5" = "u1"
+%    -> "x6" = "w" or "u1dot"
 %   params  -   constants
 arguments (Input)
     x
-    params
+    L
 end
 
 arguments (Output)
     y
 end
-    L = params{1};
 
     thetadot = x(5)/L*tan(x(4));
 

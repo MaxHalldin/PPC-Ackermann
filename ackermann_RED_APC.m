@@ -7,7 +7,7 @@ close all;
 data = load("circ_traj.mat"); 
 ref = data.ref;
 
-tspan = [0; 10]; % Seconds
+tspan = [0; 20]; % Seconds
 sampling_freq = 1e4; %Hz
 dt = 1/sampling_freq;
 ts = tspan(1):dt:tspan(2);
@@ -17,8 +17,8 @@ param = struct;
 param.dt = dt;
 
 param.l = 0.5;
-param.M1 = 2;
-param.M2 = 2;
+param.M1 = 10;
+param.M2 = 10;
 param.Fbar = 10; % Placeholder
 param.phidotbar = 10; % Placeholder
 
@@ -49,7 +49,7 @@ xer0 = [y0; ehat_0; param.rho_0];
 Y = zeros(length(xer0),length(ts));
 Y(:,1) = xer0;
 U = zeros(4,length(ts));
-inputs = zeros(2,length(ts));
+inputs = zeros(4,length(ts));
 
 % assert(r_0 > abs(y_0(1)-yr(0)-ehat_0(1)))
 
@@ -100,6 +100,7 @@ plot(ts,ref{1}(ts),':')
 grid on
 xlabel('t')
 legend('Actual path', 'Reference path')
+title("x-coordinate tracking")
 hold off
 
 figure
@@ -109,11 +110,14 @@ plot(ts,ref{2}(ts),':')
 grid on
 xlabel('t')
 legend('Actual path', 'Reference path')
+title("y-coordinate tracking")
 hold off
 
 figure
 hold on
+plot(ts,inputs(2,:))
 plot(ts,inputs(1,:))
+ylim([-1.2*param.Fbar 1.2*param.Fbar])
 grid on
 xlabel('t')
 title('F')
@@ -121,7 +125,9 @@ hold off
 
 figure
 hold on
-plot(ts,inputs(2,:))
+plot(ts,inputs(4,:))
+plot(ts,inputs(3,:))
+ylim([-1.2*param.phidotbar 1.2*param.phidotbar])
 grid on
 xlabel('t')
 title('phidot')
@@ -133,12 +139,28 @@ plot(ts,U(1,:))
 plot(ts,U(2,:))
 plot(ts,U(3,:),':')
 plot(ts,U(4,:),':')
-yline(param.ubar)
-yline(-param.ubar)
 grid on
 xlabel('t')
 title('U')
-legend('u1','u2','u_{d,1}','u_{d,2}','u_{sat}')
+legend('u1','u2','u_{d,1}','u_{d,2}')
+hold off
+
+figure
+hold on
+plot(ts,Y(13,:))
+plot(ts,-Y(13,:))
+grid on
+xlabel('t')
+title('rho_1')
+hold off
+
+figure
+hold on
+plot(ts,Y(14,:))
+plot(ts,-Y(14,:))
+grid on
+xlabel('t')
+title('rho_2')
 hold off
 
 %%
@@ -187,37 +209,58 @@ function [res,U,inputs] = RED_APC(t,y,ref,params)
 
     % Feedback control
     % 1. Linear filter
-    s(1) = params.a*sat([e(1); ehat([3 5])], params.ebar);
-    s(2) = params.a*sat([e(2); ehat([4 6])], params.ebar);
+    % s(1) = params.a*sat([e(1); ehat([3 5])], params.ebar);
+    % s(2) = params.a*sat([e(2); ehat([4 6])], params.ebar);
+    s(1) = params.a*[e(1); ehat([3 5])];
+    s(2) = params.a*[e(2); ehat([4 6])];
 
     % 2. APC
     xi = s.'./rho;
     ud = -params.K*Jf(xi).*Tf(xi);
-    u = sat(ud, params.ubar);
+
+    % Vechicle control signals.
+    
+    u1  = sqrt(Y(3)^2+Y(4)^2);
+    wd  = (Y(3)*Y(5)+Y(4)*Y(6))/u1;
+    phi = atan(params.l * (Y(3)*Y(6)-Y(4)*Y(5)) / u1^3 );
+
+    phidotd = (params.l*sqrt(Y(3)^2 + Y(4)^2) * (ud(2)*Y(3) - Y(4)*ud(1))...
+        * (Y(3)^2 + Y(4)^2) - 3*(Y(5)*Y(3) + Y(6)*Y(4)) * (Y(6)*Y(3)...
+        - Y(5)*Y(4))) / ((Y(3)^2 + Y(4)^2)^3 + params.l^2 * (Y(6) * Y(3)...
+        - Y(5)*Y(4))^2);
+    
+    wdotd = 1/(sqrt(Y(3)^2+Y(4)^2))^3 * ...
+        ( (Y(3)^2+Y(4)^2) * (Y(5)^2+Y(6)^2 + ud(1)*Y(4)+ud(2)*Y(3)) - ...
+        ( Y(3)*Y(5) + Y(4)*Y(6) )^2 );
+
+
+    Fd = (params.M1+params.M2+params.M2*tan(phi)^2)*wd + ...
+        params.M2*phidotd*sin(phi)*u1/(cos(phi)^3);
+    
+    % Imput Saturation
+    phidot = sat(phidotd, params.phidotbar);
+    F = sat(Fd, params.Fbar);
+    w = (F-params.M2*phidot*sin(phi)/(cos(phi)^3)) / ...
+        (params.M1 + params.M2 + params.M1*tan(phi));
+
+    a = (wdotd-w^2*u1^3)/(u1+eps) - w^2 - u1^4*tan(phi)/params.l^2;
+    b = 3*u1^3*w*tan(phi) + u1^3*phidotd*(1 + tan(phi)^2)/params.l;
+
+    u(1) = (a-b)/(2*Y(4)+eps);
+    u(2) = (a+b)/(2*Y(3)+eps);
+    u = u.';
+    
+    cond = ( (abs(u(1))<abs(ud(1))) && (abs(u(2))<abs(ud(2))) );
+    u = cond*u + ~cond*ud; % Use ud if imputs are not saturated.
     U = [u; ud];
+
+    inputs = [F; Fd; phidot; phidotd];
 
     rhodot = (u-ud)./xi - params.lu.*(rho - params.rho_inf);
 
     ydot = params.A*Y + params.B*u;
 
     res = [ydot; ehatdot; rhodot];
-
-    % Vechicle control signals.
-    u1 = sqrt(Y(3)^2+Y(4)^2);
-    phi = atan((Y(3)*Y(6)-Y(4)*Y(5))/(u1^3)*params.l);
-    u1dot = (Y(3)*Y(5)+Y(4)*Y(6))/u1;
-
-    phidot = (params.l*sqrt(Y(3)^2 + Y(4)^2) * (u(2) * Y(3) - Y(4) * u(1))...
-        * (Y(3)^2 + Y(4)^2) - 3*(Y(5) * Y(3) + Y(6) * Y(4)) * (Y(6) * Y(3)...
-        - Y(5) * Y(4))) / ((Y(3)^2 + Y(4)^2)^3 + params.l^2 * (Y(6) * Y(3)...
-        - Y(5)*Y(4))^2);
-
-    F = (params.M1+params.M2+params.M2*tan(phi)^2)*u1dot + ...
-        params.M2*phidot*sin(phi)*u1/(cos(phi)^3);
-    % Need to implement the capping of u based on F and phidot
-
-
-    inputs = [F; phidot];
 end
 
 %% Helper functions

@@ -1,17 +1,21 @@
-function x = state_from_flat(y,params)
+function x = state_from_flat(y,L)
 %   Transforms the flat system to non-flat
 %   x       -   state vector
+%               -> "x1" = "y1"
+%               -> "x2" = "y2"
+%               -> "x3" = "theta"
+%               -> "x4" = "phi"
+%               -> "x5" = "u1"
+%               -> "x6" = "w"
 %   params  -   constants
 arguments (Input)
     y  
-    params
+    L
 end
 
 arguments (Output)
     x
 end
-    L = params(1);
-
     x = zeros(6,1,'double');
     x(1) = y(1);
     x(2) = y(2);

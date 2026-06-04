@@ -2,13 +2,13 @@ clear all;
 clc; 
 close all;
 
-data = load("circ_traj.mat"); 
+data = load("eight_traj.mat"); 
 ref = data.ref;
-tspan = [0; 20]; % Seconds
+tspan = [0; pi*40]; % Seconds
 
 params = struct;
 
-sampling_freq = 1e4; %Hz
+sampling_freq = 1e2; %Hz
 params.dt = 1/sampling_freq;
 ts = tspan(1):params.dt:tspan(2);
 
@@ -130,17 +130,6 @@ ylabel('d^2X_2(t)')
 xlabel('d^2X_1(t)')
 legend('Estimated path', 'True path')
 title(sprintf('Acceleration tracking\nRMS = %0.3e', RMS( Y(5:6,:)-[ref{5}(ts);ref{6}(ts)] ) ))
-hold off
-
-figure
-hold on
-plot(Y(5,sampling_freq*4:end),Y(6,sampling_freq*4:end))
-plot(ref{5}(ts(sampling_freq*4:end)),ref{6}(ts(sampling_freq*4:end)),':')
-grid on
-ylabel('d^2X_2(t)')
-xlabel('d^2X_1(t)')
-title(sprintf('Acceleration tracking\nRMS = %0.3e', RMS( Y(5:6,sampling_freq*4:end)-[ref{5}(ts(sampling_freq*4:end));ref{6}(ts(sampling_freq*4:end))] ) ))
-legend('Estimated path', 'True path')
 hold off
 
 %% main
