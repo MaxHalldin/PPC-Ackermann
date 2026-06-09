@@ -2,8 +2,7 @@ clear all;
 clc; 
 close all;
 
-%% I suspect that my problem is that I need to sample faster than ode45 
-% does for integrating
+%% 
 
 A = 1;
 c = 1; 

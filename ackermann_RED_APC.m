@@ -4,17 +4,15 @@ close all;
 
 %% 
 
-data = load("circ_traj.mat"); 
-ref = data.ref;
-
-tspan = [0; 40]; % Seconds
-sampling_freq = 7e3; %Hz
-dt = 1/sampling_freq;
-ts = tspan(1):dt:tspan(2);
+% data = load("circ_traj.mat"); 
+% data = load("eight_traj.mat"); 
+data = load("adv_traj.mat"); 
+traj = data.traj;
+ts = data.ts;
 
 param = struct;
 
-param.dt = dt;
+param.dt = data.dt;
 
 param.l = 0.5;
 param.M1 = 10;
@@ -39,7 +37,9 @@ param.kprim = [10; 10; 0.2].*param.k; % Unlikely to be optimal. Should be select
 param.DGF = @(x)sign(x)*(abs(x)^(1/2)+abs(x)^(3/2));
 param.DGFprime = @(x)(3*abs(x)+1)/(2*sqrt(abs(x)) + eps );
 
-y0 = [-0.01; 1.99; 0.3; -0.01; 0; 0];
+% A correct initial guess leads to NaN propagation in simulation. investigate
+% possible causes.
+y0 = [.01; .01; .01; .01; .01; .01];
 
 ehat_0 = [0 0 0 0 0 0].';
 xer0 = [y0; ehat_0; param.rho_0];
@@ -54,8 +54,8 @@ inputs = zeros(4,length(ts));
 tic
 for i = 1:length(ts)-1
     % This is the forward Euler method. 
-    [temp,U(:,i+1),inputs(:,i+1)] = RED_APC(ts(i), Y(:,i), {ref{1:2}}.', param);
-    Y(:,i+1) = Y(:,i) + dt*temp;
+    [temp,U(:,i+1),inputs(:,i+1)] = RED_APC(ts(i), Y(:,i), traj(1:2,i), param);
+    Y(:,i+1) = Y(:,i) + param.dt*temp;
 end
 toc
 
@@ -63,17 +63,17 @@ toc
 figure
 hold on
 plot(Y(1,:),Y(2,:))
-plot(ref{1}(ts),ref{2}(ts),':')
+plot(traj(1,:),traj(2,:),':')
 grid on
 ylabel('X_1(t)')
 xlabel('X_2(t)')
 legend('Estimated path', 'True path')
-title(sprintf('Path tracking\nRMS = %0.3e', RMS(Y(1:2,:)-[ref{1}(ts);ref{2}(ts)]) ))
+title(sprintf('Path tracking\nRMS = %0.3e', RMS(Y(1:2,:)-[traj(1,:);traj(2,:)]) ))
 hold off
 
 figure
 hold on
-plot(ts,Y(1,:)-ref{1}(ts))
+plot(ts,Y(1,:)-traj(1,:))
 plot(ts,Y(7,:),':')
 grid on
 xlabel('t')
@@ -83,7 +83,7 @@ hold off
 
 figure
 hold on
-plot(ts,Y(2,:)-ref{2}(ts))
+plot(ts,Y(2,:)-traj(2,:))
 plot(ts,Y(8,:),':')
 grid on
 xlabel('t')
@@ -94,7 +94,7 @@ hold off
 figure
 hold on
 plot(ts,Y(1,:))
-plot(ts,ref{1}(ts),':')
+plot(ts,traj(1,:),':')
 grid on
 xlabel('t')
 legend('Actual path', 'Reference path')
@@ -104,7 +104,7 @@ hold off
 figure
 hold on
 plot(ts,Y(2,:))
-plot(ts,ref{2}(ts),':')
+plot(ts,traj(2,:),':')
 grid on
 xlabel('t')
 legend('Actual path', 'Reference path')
@@ -145,6 +145,7 @@ hold off
 
 figure
 hold on
+
 plot(ts,Y(13,:))
 plot(ts,-Y(13,:))
 grid on
@@ -162,13 +163,12 @@ title('rho_2')
 hold off
 
 %%
-function [res,U,inputs] = RED_APC(t,y,ref,params)
+function [res,U,inputs] = RED_APC(~,y,ref,params)
     Y = y(1:6);
     ehat = y(7:12);
     rho = y(13:14);
    
-    Y_ref = cellfun(@(c) c(t), ref);
-    e = Y(1:2)-Y_ref(1:2);
+    e = Y(1:2)-ref;
     de = e(1:2)-ehat(1:2);
 
     % RED

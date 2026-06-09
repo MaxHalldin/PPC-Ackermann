@@ -5,12 +5,11 @@ close all;
 %% 
 
 data = load("circ_traj.mat"); 
-ref = data.ref;
-
-tspan = [0; 40]; % Seconds
-sampling_freq = 7e3; %Hz
-dt = 1/sampling_freq;
-ts = tspan(1):dt:tspan(2);
+% data = load("eight_traj.mat"); 
+% data = load("adv_traj.mat"); 
+traj = data.traj;
+ts = data.ts;
+dt = data.dt;
 
 param = struct;
 
@@ -55,26 +54,11 @@ inputs = zeros(4,length(ts));
 
 % assert(r_0 > abs(y_0(1)-yr(0)-ehat_0(1)))
 
-euler = true;
 tic
-tot = length(ts);
-if euler
-    for i = 1:length(ts)-1
-        % This is the forward Euler method. 
-        [temp,U(:,i+1),inputs(:,i+1)] = URED_APC(ts(i), Y(:,i), {ref{1:2}} ,param);
-        Y(:,i+1) = Y(:,i) + dt*temp;
-    end
-else
-    for i = 1:length(ts)-1
-        % Runge-Kutta 4
-        % Looks like it is about 3-4x slower than euler forward. Should
-        % compare the score when i get it working later.
-        [f1,U(:,i+1),inputs(:,i+1)] = URED_APC(ts(i),         Y(:,i),                 ref,param);
-        [f2,~,~]                    = URED_APC(ts(i)+1/3*dt,  Y(:,i)+dt/3*f1,         ref,param);
-        [f3,~,~]                    = URED_APC(ts(i)+2/3*dt,  Y(:,i)+dt*(-f1/3+f2),   ref,param);
-        [f4,~,~]                    = URED_APC(ts(i)+dt,      Y(:,i)+dt*(f1-f2+f3),   ref,param);
-        Y(:,i+1)                    = Y(:,i) + dt/8*(f1+3*f2+3*f3+f4);
-    end
+for i = 1:length(ts)-1
+    % This is the forward Euler method. 
+    [temp,U(:,i+1),inputs(:,i+1)] = URED_APC(ts(i), Y(:,i), traj(1:2,i) ,param);
+    Y(:,i+1) = Y(:,i) + dt*temp;
 end
 toc
 
@@ -83,17 +67,17 @@ toc
 figure
 hold on
 plot(Y(1,:),Y(2,:))
-plot(ref{1}(ts),ref{2}(ts),':')
+plot(traj(1,:),traj(2,:),':')
 grid on
 ylabel('X_1(t)')
 xlabel('X_2(t)')
 legend('Estimated path', 'True path')
-title(sprintf('Path tracking\nRMS = %0.3e', RMS(Y(1:2,:)-[ref{1}(ts);ref{2}(ts)]) ))
+title(sprintf('Path tracking\nRMS = %0.3e', RMS(Y(1:2,:)-traj(1:2,:)) ))
 hold off
 
 figure
 hold on
-plot(ts,Y(1,:)-ref{1}(ts))
+plot(ts,Y(1,:)-traj(1,:))
 plot(ts,Y(7,:),':')
 grid on
 xlabel('t')
@@ -103,7 +87,7 @@ hold off
 
 figure
 hold on
-plot(ts,Y(2,:)-ref{2}(ts))
+plot(ts,Y(2,:)-traj(2,:))
 plot(ts,Y(8,:),':')
 grid on
 xlabel('t')
@@ -114,7 +98,7 @@ hold off
 figure
 hold on
 plot(ts,Y(1,:))
-plot(ts,ref{1}(ts),':')
+plot(ts,traj(1,:),':')
 grid on
 xlabel('t')
 legend('Actual path', 'Reference path')
@@ -124,7 +108,7 @@ hold off
 figure
 hold on
 plot(ts,Y(2,:))
-plot(ts,ref{2}(ts),':')
+plot(ts,traj(2,:),':')
 grid on
 xlabel('t')
 legend('Actual path', 'Reference path')
@@ -182,13 +166,12 @@ title('rho_2')
 hold off
 
 %%
-function [res,U,inputs] = URED_APC(t,y,ref,params)
+function [res,U,inputs] = URED_APC(~,y,ref,params)
     Y = y(1:6);
     ehat = y(7:12);
     rho = y(13:14);
    
-    Y_ref = cellfun(@(c) c(t), ref).';
-    e = Y(1:2)-Y_ref(1:2);
+    e = Y(1:2)-ref;
 
     % URED
     sigmax = ehat(1)-e(1);
