@@ -4,9 +4,9 @@ close all;
 
 %% 
 
-data = load("circ_traj.mat"); 
-% data = load("eight_traj.mat"); 
-% data = load("adv_traj.mat"); 
+% data = load("./Trajectories/circ_traj.mat"); 
+% data = load("./Trajectories/eight_traj.mat"); 
+data = load("./Trajectories/adv_traj.mat"); 
 traj = data.traj;
 ts = data.ts;
 dt = data.dt;
@@ -16,8 +16,8 @@ param = struct;
 param.l = 0.5;
 param.M1 = 2;
 param.M2 = 2;
-param.Fbar = 10; % Placeholder
-param.phidotbar = 10; % Placeholder
+param.Fbar = 0.05; % Placeholder
+param.phidotbar = 0.05; % Placeholder
 
 param.e_inf = 0.05*[1 1].';
 param.lu = 1.5;
@@ -40,7 +40,7 @@ cond1 = ( 0<param.k(1) && param.k(1)<2*sqrt(param.L) ) && ...
 cond2 = ( param.k(1)>2*sqrt(param.L) && param.k(2) > 2*param.L );
 assert(cond1||cond2);
 
-y0 = [-0.01; 1.99; 0.1; 0.01; 0; 0];
+y0 = [-0.01; 0.1; 0.1; 0.01; 0; 0];
 
 ehat_0 = [0 0 0 0 0 0].';
 xer0 = [y0; ehat_0; param.rho_0];
@@ -72,82 +72,81 @@ grid on
 ylabel('X_1(t)')
 xlabel('X_2(t)')
 legend('Estimated path', 'True path')
-title(sprintf('Path tracking\nRMS = %0.3e', RMS(Y(1:2,:)-traj(1:2,:)) ))
+title(sprintf('Path tracking\nRMS = %0.3e', RMS(Y(1:2,:)-[traj(1,:);traj(2,:)]) ))
 hold off
 
 figure
-hold on
-plot(ts,Y(1,:)-traj(1,:))
-plot(ts,Y(7,:),':')
-grid on
+subplot(2,1,1);
+plot(ts,Y(1,:)-traj(1,:),ts,Y(7,:),':')
+legend('e1','e1hat');
 xlabel('t')
-legend('e1', 'ehat1')
-title('Error estimation 1')
-hold off
+grid on
+subplot(2,1,2);
+plot(ts,Y(2,:)-traj(2,:),ts,Y(8,:),':')
+legend('e2','e2hat');
+xlabel('t')
+grid on
+sgtitle('Error estimation')
 
 figure
-hold on
-plot(ts,Y(2,:)-traj(2,:))
-plot(ts,Y(8,:),':')
+subplot(2,1,1);
+plot(ts,Y(1,:),ts,traj(1,:),':')
 grid on
 xlabel('t')
-legend('e2', 'ehat2')
-title('Error estimation 2')
-hold off
-
-figure
-hold on
-plot(ts,Y(1,:))
-plot(ts,traj(1,:),':')
-grid on
-xlabel('t')
+ylabel('y1')
 legend('Actual path', 'Reference path')
-title("x-coordinate tracking")
-hold off
-
-figure
-hold on
-plot(ts,Y(2,:))
-plot(ts,traj(2,:),':')
+subplot(2,1,2);
+plot(ts,Y(2,:),ts,traj(2,:),':')
 grid on
 xlabel('t')
+ylabel('y2')
 legend('Actual path', 'Reference path')
-title("y-coordinate tracking")
-hold off
+sgtitle("Coordinate tracking")
 
 figure
+subplot(2,1,1);
 hold on
 plot(ts,inputs(2,:))
 plot(ts,inputs(1,:))
+yline([-param.Fbar,param.Fbar],'--')
 ylim([-1.2*param.Fbar 1.2*param.Fbar])
 grid on
 xlabel('t')
 title('F')
 hold off
-
-figure
+subplot(2,1,2);
 hold on
 plot(ts,inputs(4,:))
 plot(ts,inputs(3,:))
+yline([-param.phidotbar,param.phidotbar],'--')
 ylim([-1.2*param.phidotbar 1.2*param.phidotbar])
 grid on
 xlabel('t')
 title('phidot')
 hold off
+sgtitle('Input saturation')
 
 figure
+subplot(2,1,1);
 hold on
 plot(ts,U(1,:))
-plot(ts,U(2,:))
 plot(ts,U(3,:),':')
+grid on
+xlabel('t')
+legend('u1','u_{d,1}')
+hold off
+subplot(2,1,2);
+hold on
+plot(ts,U(2,:))
 plot(ts,U(4,:),':')
 grid on
 xlabel('t')
-title('U')
-legend('u1','u2','u_{d,1}','u_{d,2}')
+legend('u2','u_{d,2}')
 hold off
+sgtitle('Flat system input saturation')
 
 figure
+subplot(2,1,1);
 hold on
 plot(ts,Y(13,:))
 plot(ts,-Y(13,:))
@@ -155,8 +154,7 @@ grid on
 xlabel('t')
 title('rho_1')
 hold off
-
-figure
+subplot(2,1,2);
 hold on
 plot(ts,Y(14,:))
 plot(ts,-Y(14,:))
@@ -164,6 +162,7 @@ grid on
 xlabel('t')
 title('rho_2')
 hold off
+sgtitle('Performance boundaries')
 
 %%
 function [res,U,inputs] = URED_APC(~,y,ref,params)
@@ -224,6 +223,7 @@ function [res,U,inputs] = URED_APC(~,y,ref,params)
         - Y(5)*Y(4))) / ((Y(3)^2 + Y(4)^2)^3 + params.l^2 * (Y(6) * Y(3)...
         - Y(5)*Y(4))^2);
     
+    % Unconstrained jerk
     wdotd = 1/(sqrt(Y(3)^2+Y(4)^2))^3 * ...
         ( (Y(3)^2+Y(4)^2) * (Y(5)^2+Y(6)^2 + ud(1)*Y(4)+ud(2)*Y(3)) - ...
         ( Y(3)*Y(5) + Y(4)*Y(6) )^2 );
@@ -245,7 +245,7 @@ function [res,U,inputs] = URED_APC(~,y,ref,params)
     u(2) = (a+b)/(2*Y(3)+eps);
     u = u.';
     
-    cond = ( (abs(u(1))<abs(ud(1))) && (abs(u(2))<abs(ud(2))) );
+    cond = ( (abs(u(1))<=abs(ud(1))) && (abs(u(2))<=abs(ud(2))) );
     u = cond*u + ~cond*ud; % Use ud if imputs are not saturated.
     U = [u; ud];
 

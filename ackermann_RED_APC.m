@@ -4,9 +4,9 @@ close all;
 
 %% 
 
-% data = load("circ_traj.mat"); 
-% data = load("eight_traj.mat"); 
-data = load("adv_traj.mat"); 
+% data = load("./Trajectories/circ_traj.mat"); 
+% data = load("./Trajectories/eight_traj.mat"); 
+data = load("./Trajectories/adv_traj.mat"); 
 traj = data.traj;
 ts = data.ts;
 
@@ -39,7 +39,7 @@ param.DGFprime = @(x)(3*abs(x)+1)/(2*sqrt(abs(x)) + eps );
 
 % A correct initial guess leads to NaN propagation in simulation. investigate
 % possible causes.
-y0 = [.01; .01; .01; .01; .01; .01];
+y0 = [.1; .1; .01; .01; .01; .01];
 
 ehat_0 = [0 0 0 0 0 0].';
 xer0 = [y0; ehat_0; param.rho_0];
@@ -72,88 +72,85 @@ title(sprintf('Path tracking\nRMS = %0.3e', RMS(Y(1:2,:)-[traj(1,:);traj(2,:)]) 
 hold off
 
 figure
-hold on
-plot(ts,Y(1,:)-traj(1,:))
-plot(ts,Y(7,:),':')
-grid on
+subplot(2,1,1);
+plot(ts,Y(1,:)-traj(1,:),ts,Y(7,:),':')
+legend('e1','e1hat');
 xlabel('t')
-legend('e1', 'ehat1')
-title('Error estimation 1')
-hold off
+grid on
+subplot(2,1,2);
+plot(ts,Y(2,:)-traj(2,:),ts,Y(8,:),':')
+legend('e2','e2hat');
+xlabel('t')
+grid on
+sgtitle('Error estimation')
 
 figure
-hold on
-plot(ts,Y(2,:)-traj(2,:))
-plot(ts,Y(8,:),':')
+subplot(2,1,1);
+plot(ts,Y(1,:),ts,traj(1,:),':')
 grid on
 xlabel('t')
-legend('e2', 'ehat2')
-title('Error estimation 2')
-hold off
-
-figure
-hold on
-plot(ts,Y(1,:))
-plot(ts,traj(1,:),':')
-grid on
-xlabel('t')
+ylabel('y1')
 legend('Actual path', 'Reference path')
-title("x-coordinate tracking")
-hold off
-
-figure
-hold on
-plot(ts,Y(2,:))
-plot(ts,traj(2,:),':')
+subplot(2,1,2);
+plot(ts,Y(2,:),ts,traj(2,:),':')
 grid on
 xlabel('t')
+ylabel('y2')
 legend('Actual path', 'Reference path')
-title("y-coordinate tracking")
-hold off
+sgtitle("Coordinate tracking")
 
 figure
+subplot(2,1,1);
 hold on
 plot(ts,inputs(2,:))
 plot(ts,inputs(1,:))
+yline([-param.Fbar,param.Fbar],'--')
 ylim([-1.2*param.Fbar 1.2*param.Fbar])
 grid on
 xlabel('t')
 title('F')
 hold off
-
-figure
+subplot(2,1,2);
 hold on
 plot(ts,inputs(4,:))
 plot(ts,inputs(3,:))
+yline([-param.phidotbar,param.phidotbar],'--')
 ylim([-1.2*param.phidotbar 1.2*param.phidotbar])
 grid on
 xlabel('t')
 title('phidot')
 hold off
+sgtitle('Input saturation')
 
 figure
+subplot(2,1,1);
 hold on
 plot(ts,U(1,:))
-plot(ts,U(2,:))
 plot(ts,U(3,:),':')
+grid on
+xlabel('t')
+legend('u1','u_{d,1}')
+hold off
+subplot(2,1,2);
+hold on
+plot(ts,U(2,:))
 plot(ts,U(4,:),':')
 grid on
 xlabel('t')
-title('U')
-legend('u1','u2','u_{d,1}','u_{d,2}')
+legend('u2','u_{d,2}')
 hold off
+sgtitle('Flat system input saturation')
 
 figure
+subplot(2,1,1);
 hold on
-
 plot(ts,Y(13,:))
 plot(ts,-Y(13,:))
 grid on
 xlabel('t')
 title('rho_1')
 hold off
-
-figure
+subplot(2,1,2);
 hold on
 plot(ts,Y(14,:))
 plot(ts,-Y(14,:))
@@ -161,6 +158,7 @@ grid on
 xlabel('t')
 title('rho_2')
 hold off
+sgtitle('Performance boundaries')
 
 %%
 function [res,U,inputs] = RED_APC(~,y,ref,params)
