@@ -20,7 +20,7 @@ traj = cell2mat(cellfun(@(x) x(ts), ref, 'uni', 0 ));
 
 save(".\Trajectories\eight_traj.mat")
 
-plot(traj(1,:),traj(2,:))
+% plot(traj(1,:),traj(2,:))
 
 % RED
 % y0 = [-.01; .09; .3; -.01; 0; 0];

@@ -1,5 +1,3 @@
-clear all
-clc
 % Data file for advanced trajectory.
 
 tspan = [0; 92]; % Seconds
@@ -32,14 +30,15 @@ traj = zeros(2,length(ts));
 traj(1,:) = spline(vias(:,3),vias(:,1),ts);
 traj(2,:) = spline(vias(:,3),vias(:,2),ts);
 
-save(".\Trajectories\adv_traj.mat")
+save("adv_traj.mat")
+clearvars(keeps=[traj_path])
 
 %%
-figure
-plot(traj(1,:),traj(2,:))
-figure
-plot(ts, traj(1,:))
-figure
-plot(ts,traj(2,:))
+% figure
+% plot(traj(1,:),traj(2,:))
+% figure
+% plot(ts, traj(1,:))
+% figure
+% plot(ts,traj(2,:))
 
-% y0 = [0; 0; 0; 0; 0; 0]
+% y0 = [0; 0; 0; 0; 0; 0];

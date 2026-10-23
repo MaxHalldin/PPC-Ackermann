@@ -21,7 +21,7 @@ traj = cell2mat(cellfun(@(x) x(ts), ref, 'uni', 0 ));
 save(".\Trajectories\circ_traj.mat")
 
 %%
-plot(traj(1,:),traj(2,:))
+% plot(traj(1,:),traj(2,:))
 
 % RED
 % y0 = [-0.01; 1.99; 0.3; -0.01; 0; 0];
