@@ -31,14 +31,24 @@ traj(1,:) = spline(vias(:,3),vias(:,1),ts);
 traj(2,:) = spline(vias(:,3),vias(:,2),ts);
 
 save("adv_traj.mat")
-clearvars(keeps=[traj_path])
+% clearvars(keeps=[traj_path])
 
 %%
 % figure
+% hold on
 % plot(traj(1,:),traj(2,:))
+% scatter(vias(:,1),vias(:,2))
+% hold off
 % figure
+% subplot(2,1,1);
+% hold on
 % plot(ts, traj(1,:))
-% figure
+% scatter(vias(:,3),vias(:,1))
+% hold off
+% subplot(2,1,2);
+% hold on
 % plot(ts,traj(2,:))
+% scatter(vias(:,3),vias(:,2))
+% hold off
 
 % y0 = [0; 0; 0; 0; 0; 0];

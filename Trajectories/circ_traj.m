@@ -5,8 +5,8 @@ sampling_freq = 1e4; %Hz
 dt = 1/sampling_freq;
 ts = tspan(1):dt:tspan(2);
 
-A = 2;
-c = pi/10;
+A = 1;
+c = 2*pi/tspan(2);
 
 ref = cell(6,1);
 ref{1} = @(t)A*sin(c*t);
@@ -24,4 +24,4 @@ save(".\Trajectories\circ_traj.mat")
 % plot(traj(1,:),traj(2,:))
 
 % RED
-% y0 = [-0.01; 1.99; 0.3; -0.01; 0; 0];
+% y0 = [-0.01; 0.99; 0.3; -0.01; 0; 0];

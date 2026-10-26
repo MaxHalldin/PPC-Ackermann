@@ -1,16 +1,16 @@
 % Data file for circular trajectory
 
-tspan = [0; 40*pi]; % Seconds
+tspan = [0; 40]; % Seconds
 sampling_freq = 1e4; %Hz
 dt = 1/sampling_freq;
 ts = tspan(1):dt:tspan(2);
 
 A = 2;
-c = 1;
+c = pi/20;
 
 ref = cell(6,1);
-ref{1}  = @(t)A*sin(c*t/10);
-ref{2}  = @(t)A*sin(c*t/20);
+ref{1}  = @(t)A*sin(2*c*t);
+ref{2}  = @(t)A*sin(c*t);
 ref{3} = @(t)A*c/10*cos(c*t/10);
 ref{4} = @(t)A*c/20*cos(c*t/20);
 ref{5} = @(t)A*-c^2/100*sin(c*t/10);

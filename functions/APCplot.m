@@ -22,7 +22,7 @@ grid on
 ylabel('X_1(t)')
 xlabel('X_2(t)')
 legend('Estimated path', 'True path')
-title(sprintf('Path tracking\nRMS = %0.3e', RMS(Y(1:2,:)-[traj(1,:);traj(2,:)]) ))
+title(sprintf('Path tracking \nRMS = %0.3e', RMS(Y(1:2,:),[traj(1,:);traj(2,:)]) ))
 hold off
 
 figure
@@ -31,13 +31,13 @@ plot(ts,Y(1,:)-traj(1,:),ts,Y(7,:),':')
 lgd1 = legend('$e_1$','$\hat{e}_1$');
 xlabel('t')
 grid on
-title(sprintf('RMSE_1 = %0.3e', RMS( Y(7,:)-(Y(1,:)-traj(1,:))) ))
+title(sprintf('RMSE_1 = %0.3e', RMS( Y(7,:),Y(1,:)-traj(1,:) ) ))
 subplot(2,1,2);
 plot(ts,Y(2,:)-traj(2,:),ts,Y(8,:),':')
 lgd2 = legend('$e_2$','$\hat{e}_2$');
 xlabel('t')
 grid on
-title(sprintf('RMSE_2 = %0.3e', RMS( Y(8,:)-(Y(2,:)-traj(2,:))) ))
+title(sprintf('RMSE_2 = %0.3e', RMS( Y(8,:),Y(2,:)-traj(2,:) ) ))
 sgtitle('Error estimation')
 set(lgd1, 'interpreter', 'latex')
 set(lgd2, 'interpreter', 'latex')
@@ -49,14 +49,14 @@ grid on
 xlabel('t')
 ylabel('y_1')
 legend('Actual path', 'Reference path')
-title(sprintf('RMS_1 = %0.3e', RMS(Y(1,:)-traj(1,:))) )
+title(sprintf('RMS_1 = %0.3e', RMS(Y(1,:),traj(1,:))) )
 subplot(2,1,2);
 plot(ts,Y(2,:),ts,traj(2,:),':')
 grid on
 xlabel('t')
 ylabel('y_2')
 legend('Actual path', 'Reference path')
-title(sprintf('RMS_2 = %0.3e', RMS(Y(2,:)-traj(2,:))) )
+title(sprintf('RMS_2 = %0.3e', RMS(Y(2,:),traj(2,:))) )
 sgtitle("Coordinate tracking")
 
 figure
